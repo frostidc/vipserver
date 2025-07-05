@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Private Server Linkleri - İzleyici</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #f8f8f8, #e8f0ff);
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #1e3a8a;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    .message {
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      background: #f9f9f9;
+    }
+    .message a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    .message a:hover {
+      text-decoration: underline;
+    }
+    .likes {
+      color: #555;
+      margin-top: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .likes:hover {
+      color: #111;
+    }
+    .comment-box {
+      margin-top: 15px;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      resize: vertical;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      margin-top: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    .comments {
+      margin-top: 10px;
+      padding-left: 10px;
+    }
+    .comment {
+      font-size: 0.95em;
+      margin-bottom: 8px;
+      border-left: 3px solid #ccc;
+      padding-left: 10px;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Private Server Linkleri</h1>
+    <p>Sadece izleyicilere özel görünüm</p>
+  </header>
+
+  <div class="container" id="messages-container">
+    <!-- Mesajlar buraya Firebase'den yüklenecek -->
+  </div>
+
+  <footer>
+    &copy; 2025 Private Server Paylaşım Platformu
+  </footer>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Firebase modüllerini içe aktar
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getDatabase, ref, onValue, push, update } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD65m2Ev8vebGdJzjp6d26CLacCpVekAys",
+      authDomain: "private-cdc92.firebaseapp.com",
+      databaseURL: "https://private-cdc92-default-rtdb.firebaseio.com",
+      projectId: "private-cdc92",
+      storageBucket: "private-cdc92.firebasestorage.app",
+      messagingSenderId: "677580184832",
+      appId: "1:677580184832:web:71de86e9cf4104741067e5",
+      measurementId: "G-K1Y9KJPWJB"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const messagesRef = ref(db, 'messages');
+    const container = document.getElementById("messages-container");
+
+    onValue(messagesRef, (snapshot) => {
+      container.innerHTML = '';
+      snapshot.forEach((child) => {
+        const id = child.key;
+        const data = child.val();
+        const div = document.createElement("div");
+        div.className = "message";
+        div.id = id;
+        div.innerHTML = `
+          <p><strong>Link:</strong> <a href="${data.link}" target="_blank">${data.link}</a></p>
+          <div class="likes" onclick="likeMessage('${id}')">👍 <span id="likes-${id}">${data.likes || 0}</span> Beğeni</div>
+          <div class="comments" id="comments-${id}"></div>
+          <div class="comment-box">
+            <textarea id="comment-input-${id}" rows="2" placeholder="Yorumunuzu yazın..."></textarea>
+            <button onclick="addComment('${id}')">Yorum Yap</button>
+          </div>
+        `;
+        container.appendChild(div);
+
+        if (data.comments) {
+          const commentList = document.getElementById(`comments-${id}`);
+          data.comments.forEach(c => {
+            const cDiv = document.createElement("div");
+            cDiv.className = "comment";
+            cDiv.textContent = c;
+            commentList.appendChild(cDiv);
+          });
+        }
+      });
+    });
+
+    window.likeMessage = function(id) {
+      const likeSpan = document.getElementById(`likes-${id}`);
+      const newLikes = parseInt(likeSpan.textContent) + 1;
+      update(ref(db, 'messages/' + id), { likes: newLikes });
+    };
+
+    window.addComment = function(id) {
+      const input = document.getElementById(`comment-input-${id}`);
+      const text = input.value.trim();
+      if (text) {
+        const commentRef = ref(db, 'messages/' + id + '/comments');
+        onValue(commentRef, (snapshot) => {
+          let comments = snapshot.val() || [];
+          comments.push(text);
+          update(ref(db, 'messages/' + id), { comments });
+        }, { onlyOnce: true });
+        input.value = '';
+      }
+    };
+  </script>
+</body>
+</html>
