@@ -33,12 +33,13 @@
       margin-bottom: 20px;
       background: #f9f9f9;
     }
-    .message a {
-      color: #2563eb;
-      text-decoration: none;
-    }
-    .message a:hover {
-      text-decoration: underline;
+    .embed {
+      margin-top: 10px;
+      background: #eef1fb;
+      padding: 10px;
+      border-radius: 8px;
+      border-left: 4px solid #2563eb;
+      font-size: 0.95em;
     }
     .likes {
       color: #555;
@@ -104,9 +105,8 @@
 
   <!-- Firebase SDK -->
   <script type="module">
-    // Firebase modüllerini içe aktar
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getDatabase, ref, onValue, push, update } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD65m2Ev8vebGdJzjp6d26CLacCpVekAys",
@@ -133,19 +133,26 @@
         const div = document.createElement("div");
         div.className = "message";
         div.id = id;
+
+        const likeId = `likes-${id}`;
+        const commentId = `comments-${id}`;
+
         div.innerHTML = `
-          <p><strong>Link:</strong> <a href="${data.link}" target="_blank">${data.link}</a></p>
-          <div class="likes" onclick="likeMessage('${id}')">👍 <span id="likes-${id}">${data.likes || 0}</span> Beğeni</div>
-          <div class="comments" id="comments-${id}"></div>
+          <p><strong>Sunucu:</strong> <a href="${data.link}" target="_blank">${data.link}</a></p>
+          <div class="embed">${data.description || 'Açıklama yok.'}</div>
+          <div class="likes" id="like-${id}">👍 <span id="${likeId}">${data.likes || 0}</span> Beğeni</div>
+          <div class="comments" id="${commentId}"></div>
           <div class="comment-box">
             <textarea id="comment-input-${id}" rows="2" placeholder="Yorumunuzu yazın..."></textarea>
             <button onclick="addComment('${id}')">Yorum Yap</button>
           </div>
         `;
+
         container.appendChild(div);
 
+        // Yorumları yükle
         if (data.comments) {
-          const commentList = document.getElementById(`comments-${id}`);
+          const commentList = document.getElementById(commentId);
           data.comments.forEach(c => {
             const cDiv = document.createElement("div");
             cDiv.className = "comment";
@@ -153,17 +160,21 @@
             commentList.appendChild(cDiv);
           });
         }
+
+        // Beğeni işlemi (sadece 1 kez)
+        const likeElement = div.querySelector(`#like-${id}`);
+        likeElement.addEventListener("click", () => {
+          if (localStorage.getItem(`liked_${id}`)) return;
+          const span = document.getElementById(likeId);
+          const newLikes = parseInt(span.textContent) + 1;
+          update(ref(db, 'messages/' + id), { likes: newLikes });
+          localStorage.setItem(`liked_${id}`, true);
+        });
       });
     });
 
-    window.likeMessage = function(id) {
-      const likeSpan = document.getElementById(`likes-${id}`);
-      const newLikes = parseInt(likeSpan.textContent) + 1;
-      update(ref(db, 'messages/' + id), { likes: newLikes });
-    };
-
     window.addComment = function(id) {
-      const input = document.getElementById(`comment-input-${id}`);
+      const input = document.getElementById("comment-input-" + id);
       const text = input.value.trim();
       if (text) {
         const commentRef = ref(db, 'messages/' + id + '/comments');
